@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -18,11 +19,33 @@ func main() {
 		os.Exit(1)
 	}
 
-    con, err := l.Accept()
+	conn, err := l.Accept()
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
 
-    con.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+    handleConnection(conn)
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	buf := make([]byte, 1024)
+	n, _ := conn.Read(buf)
+	fmt.Printf("received %d bytes\n", n)
+	fmt.Printf("received the following data: %s", string(buf[:n]))
+
+	requestLine := strings.Split(string(buf), "\r\n")
+	fmt.Println(requestLine[0])
+
+	request := strings.Fields(requestLine[0])
+	method := request[0]
+	path := request[1]
+
+	if method == "GET" && path == "/" {
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	} else {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	}
 }
