@@ -46,16 +46,25 @@ func handleConnection(conn net.Conn) {
 	if method == "GET" {
 		if path == "/" {
 			conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-			return
-		} else {
-			echoPath := strings.Split(path, "/")
-			if echoPath[1] == "echo" {
-				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(echoPath[2]), echoPath[2])
-				conn.Write([]byte(response))
-				return
+		} else if strings.HasPrefix(path, "/echo") {
+			param := strings.SplitN(path, "/", 3)[2]
+
+			response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(param), param)
+			conn.Write([]byte(response))
+		} else if path == "/user-agent" {
+			var userAgent string
+			for _, header := range requestLine {
+				if strings.HasPrefix(header, "User-Agent") {
+					userAgent = header
+					break
+				}
 			}
+
+			data := strings.Split(strings.Fields(userAgent)[1], "\r\n")[0]
+			response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
+			conn.Write([]byte(response))
+		} else {
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		}
 	}
-	conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-
 }
