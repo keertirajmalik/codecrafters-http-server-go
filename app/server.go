@@ -25,7 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
-    handleConnection(conn)
+	handleConnection(conn)
 }
 
 func handleConnection(conn net.Conn) {
@@ -43,9 +43,19 @@ func handleConnection(conn net.Conn) {
 	method := request[0]
 	path := request[1]
 
-	if method == "GET" && path == "/" {
-		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	if method == "GET" {
+		if path == "/" {
+			conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+			return
+		} else {
+			echoPath := strings.Split(path, "/")
+			if echoPath[1] == "echo" {
+				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(echoPath[2]), echoPath[2])
+				conn.Write([]byte(response))
+				return
+			}
+		}
 	}
+	conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+
 }
