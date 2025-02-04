@@ -21,7 +21,7 @@ func main() {
 		os.Exit(1)
 	}
 
-    defer l.Close()
+	defer l.Close()
 
 	for {
 		conn, err := l.Accept()
@@ -50,6 +50,20 @@ func handleConnection(conn net.Conn) {
 		data := request.UserAgent()
 
 		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
+		conn.Write([]byte(response))
+	} else if strings.HasPrefix(request.URL.Path, "/files") {
+		args := os.Args
+		directoryPath := args[2]
+		filePath := directoryPath + strings.Split(request.URL.Path, "/")[2]
+
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Println("file read failed with error:", err)
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+
+		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(content), content)
 		conn.Write([]byte(response))
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
