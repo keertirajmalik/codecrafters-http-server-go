@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net"
@@ -45,7 +47,14 @@ func handleConnection(conn net.Conn) {
 		encodings := strings.Split(request.Header.Get("Accept-Encoding"), ",")
 		for _, encoding := range encodings {
 			if strings.TrimSpace(encoding) == "gzip" {
-				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", len(param), param)
+				var buf bytes.Buffer
+				zw := gzip.NewWriter(&buf)
+				_, err := zw.Write([]byte(param))
+				zw.Close()
+				if err != nil {
+					fmt.Println("failed to compress text with error:", err)
+				}
+				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", buf.Len(), &buf)
 				conn.Write([]byte(response))
 			}
 		}
