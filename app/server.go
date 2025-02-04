@@ -42,8 +42,9 @@ func handleConnection(conn net.Conn) {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else if strings.HasPrefix(request.URL.Path, "/echo") {
 		param := strings.Split(request.URL.Path, "/")[2]
-		if len(request.Header.Values("Accept-Encoding")) > 0 {
-			if request.Header.Values("Accept-Encoding")[0] == "gzip" {
+		encodings := strings.Split(request.Header.Get("Accept-Encoding"), ",")
+		for _, encoding := range encodings {
+			if strings.TrimSpace(encoding) == "gzip" {
 				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", len(param), param)
 				conn.Write([]byte(response))
 			}
