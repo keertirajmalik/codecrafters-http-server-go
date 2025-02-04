@@ -42,7 +42,12 @@ func handleConnection(conn net.Conn) {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else if strings.HasPrefix(request.URL.Path, "/echo") {
 		param := strings.Split(request.URL.Path, "/")[2]
-
+		if len(request.Header.Values("Accept-Encoding")) > 0 {
+			if request.Header.Values("Accept-Encoding")[0] == "gzip" {
+				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: %d\r\n\r\n%s", len(param), param)
+				conn.Write([]byte(response))
+			}
+		}
 		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(param), param)
 		conn.Write([]byte(response))
 	} else if request.URL.Path == "/user-agent" {
@@ -72,6 +77,7 @@ func handleConnection(conn net.Conn) {
 			if err != nil {
 				fmt.Println("reading from body failed with error:", err)
 				conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+				return
 			}
 			os.WriteFile(filePath, []byte(content), os.ModeAppend)
 			conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
