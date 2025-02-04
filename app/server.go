@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -12,8 +13,6 @@ import (
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-
-	// Uncomment this block to pass the first stage
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -56,15 +55,27 @@ func handleConnection(conn net.Conn) {
 		directoryPath := args[2]
 		filePath := directoryPath + strings.Split(request.URL.Path, "/")[2]
 
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("file read failed with error:", err)
-			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-			return
+		if request.Method == "GET" {
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				fmt.Println("file read failed with error:", err)
+				conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+				return
+			}
+
+			response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(content), content)
+			conn.Write([]byte(response))
 		}
 
-		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(content), content)
-		conn.Write([]byte(response))
+		if request.Method == "POST" {
+			content, err := io.ReadAll(request.Body)
+			if err != nil {
+				fmt.Println("reading from body failed with error:", err)
+				conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			}
+			os.WriteFile(filePath, []byte(content), os.ModeAppend)
+			conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
+		}
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
